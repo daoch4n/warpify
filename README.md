@@ -67,7 +67,7 @@ Options:
 
 Example: bun proxy.js -v -a auth-secret socks my-instance.workers.dev
 
-By Lucas V. Araujo <root@lva.sh>
+By daoch4n <daoch4n@gmail.com>
 More at https://github.com/lvmalware
 
 ```
