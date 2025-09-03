@@ -107,9 +107,9 @@ main() {
   fi
   echo "[+] Generated authorization token for workers."
 
-  # Optionally ask for proxy type and port with defaults; keep it simple and default to SOCKS5/1080
-  TYPE="socks"   # can be "socks" or "http"
-  PORT=1080       # 1080 for SOCKS, 8080 for HTTP usually
+  # Optionally ask for proxy type and port with defaults; keep it simple and default to HTTP/8080
+  TYPE="http"   # can be "socks" or "http"
+  PORT=8080       # 1080 for SOCKS, 8080 for HTTP usually
 
   echo "[+] Deploying $NAME0..."
   set_worker_name "$NAME0"
@@ -136,8 +136,72 @@ main() {
   if [[ -z "${HOST0:-}" ]]; then HOST0="$NAME0.workers.dev"; fi
   if [[ -z "${HOST1:-}" ]]; then HOST1="$NAME1.workers.dev"; fi
 
-  echo "[+] Writing config.json with the new workers and token..."
-  cat > config.json <<JSON
+  # Function to check if a port is in use
+  is_port_in_use() {
+    local port=$1
+    if command -v lsof >/dev/null 2>&1; then
+      lsof -i :"$port" >/dev/null 2>&1
+    elif command -v netstat >/dev/null 2>&1; then
+      netstat -an | grep LISTEN | grep ":$port " >/dev/null 2>&1
+    else
+      # If neither lsof nor netstat is available, assume port is free
+      # This is a fallback and might not be 100% reliable.
+      return 1
+    fi
+  }
+
+  # Function to find a free port
+  find_free_port() {
+    local start_port=${1:-1024}
+    local max_port=65535
+    local port
+    
+    # First, try the preferred port
+    if ! is_port_in_use "$PORT"; then
+      echo "$PORT"
+      return 0
+    fi
+    
+    # If preferred port is in use, try random ports
+    echo "[!] Port $PORT is in use. Searching for a free port..." >&2
+    for i in $(seq 1 100); do # Try up to 100 times
+      port=$((start_port + RANDOM % (max_port - start_port + 1)))
+      if ! is_port_in_use "$port"; then
+        echo "$port"
+        return 0
+      fi
+    done
+    
+    echo "[!] Could not find a free port after 100 attempts." >&2
+    return 1
+  }
+
+  # Find a free port
+  FREE_PORT=$(find_free_port)
+  if [[ -z "$FREE_PORT" ]]; then
+    echo "[!] Failed to find a free port. Exiting."
+    exit 1
+  fi
+  
+  if [[ "$FREE_PORT" != "$PORT" ]]; then
+      echo "[+] Using free port: $FREE_PORT"
+      # Update config.json with the free port
+      cat > config.json <<JSON
+{
+  "worker": [
+    "${HOST0}",
+    "${HOST1}"
+  ],
+  "authorization": "${TOKEN}",
+  "port": ${FREE_PORT},
+  "type": "${TYPE}",
+  "verbose": false,
+ "load_balancing_strategy": "random"
+}
+JSON
+  else
+      echo "[+] Writing config.json with the new workers and token..."
+      cat > config.json <<JSON
 {
   "worker": [
     "${HOST0}",
@@ -150,14 +214,17 @@ main() {
   "load_balancing_strategy": "random"
 }
 JSON
+  fi
 
   echo "[+] Configuration written to config.json"
   echo "    Workers: ${HOST0}, ${HOST1}"
-  echo "    Type: ${TYPE}, Port: ${PORT}"
+  echo "    Type: ${TYPE}, Port: ${FREE_PORT}"
 
-  echo "[+] Starting proxy client (bun run start)..."
+  echo "[+] Starting proxy client..."
   echo "    Press Ctrl+C to stop the proxy."
-  bun run start
+  echo "[i] Running command: bun proxy.js $TYPE -a $TOKEN -p $FREE_PORT --worker $HOST0 --worker $HOST1"
+  # bun run start
+  bun proxy.js "$TYPE" -a "$TOKEN" -p "$FREE_PORT" --worker "$HOST0" --worker "$HOST1"
 }
 
 main "$@"
