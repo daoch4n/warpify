@@ -35,7 +35,33 @@ Login to Cloudflare with `wrangler`:
 wrangler login
 ```
 
-### 1. Deploy the Worker
+### 1. Automated Deployment
+
+For a streamlined setup, an automated deployment script is provided. This script will:
+- Deploy two Cloudflare workers, `warpify0` and `warpify1`.
+- Automatically generate a secure authorization token and apply it to both workers.
+- Automatically generate a `config.json` file ready for use.
+- Start the proxy client.
+
+To run the script, first make it executable, then run it:
+
+```bash
+chmod +x deploy.sh
+./deploy.sh
+```
+
+The script is designed to be safely re-runnable:
+- It always resets `worker/wrangler.toml` back to `name = "warpify0"` at the end.
+- It updates/overwrites the `TOKEN` secret for both workers on each run.
+- It regenerates the `config.json` with the latest worker URLs and token.
+
+Once the script is finished, the proxy will be running and configured.
+
+### 2. Manual Setup
+
+If you prefer to configure the client manually or need a more customized setup, follow these steps.
+
+#### A. Deploy the Worker(s)
 
 `cd` into the `worker/` directory, install dependencies, and deploy:
 
@@ -45,56 +71,32 @@ bun i
 wrangler deploy
 ```
 
-This will create a worker (e.g., `my-instance.workers.dev`). You can deploy the same worker multiple times under different names to create a pool of endpoints for load balancing.
+This will create a worker (e.g., `my-instance.workers.dev`). You can edit `worker/wrangler.toml` to change the name and deploy multiple times to create a pool of endpoints for load balancing.
 
-Next, you need to set a secret authorization token for your worker. This prevents unauthorized use.
+For each worker you deploy, you must set its secret authorization token:
 
 ```bash
 # Still in the worker/ directory
-wrangler secret put TOKEN
+wrangler secret put TOKEN --name your-worker-name
 ```
 
-You will be prompted to enter the value for your secret token.
+#### B. Configure the Client
 
-### 2. Configure the Client
-
-The client can be configured using a `config.json` file in the project root. This is the recommended method.
-
-Create a `config.json` file by copying the example:
+Copy the example configuration file:
 
 ```bash
 cp config.example.json config.json
 ```
 
-Now, edit `config.json` to add your worker endpoints and authorization token:
+Now, edit `config.json` to add your worker endpoints and authorization token.
 
-```json
-{
-  "worker": [
-    "your-worker-1.workers.dev",
-    "your-worker-2.workers.dev"
-  ],
-  "authorization": "your-auth-token-you-set-with-wrangler",
-  "port": 1080,
-  "type": "socks",
-  "verbose": false,
-  "retry_enabled": true,
-  "max_retries": 5,
-  "retry_initial_backoff": 1000,
-  "retry_factor": 2,
-  "load_balancing_strategy": "random"
-}
-```
+#### C. Run the Proxy
 
-### 3. Run the Proxy
-
-Once configured, you can start the proxy client from the project's root directory:
+Once configured, start the proxy client from the project's root directory:
 
 ```bash
 bun run start
 ```
-
-The client will read your `config.json` and start the proxy server. You can then configure your browser or application to use `127.0.0.1:1080` (or the port you specified) as a SOCKS5 or HTTP proxy.
 
 ### Command-Line Options
 
