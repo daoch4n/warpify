@@ -48,7 +48,7 @@ export const proxyConnect = (target, socket, options) => {
     ws.onopen = () => {
       opened = true;
       log.debug('WebSocket onopen');
-      if (options.type == 'HTTP')
+      if (options.type === 'HTTP')
         socket.write('HTTP/1.1 200 OK\r\n\r\n');
       else
         socket.write(Buffer.from([0x5, 0x00, 0x00, 0x01, 0x7f, 0x00, 0x00, 0x01, 0x00, 0x00]));
@@ -59,7 +59,7 @@ export const proxyConnect = (target, socket, options) => {
       log.error('WebSocket onerror', msg);
 
       if (!opened && retryEnabled && attempts <= maxRetries) {
-        const delay = initialBackoff * Math.pow(factor, attempts - 1);
+        const delay = initialBackoff * factor ** (attempts - 1);
         log.warn(`[Retry] Attempt ${attempts} failed. Retrying in ${delay}ms...`);
         await sleep(delay);
         connectOnce();
@@ -79,14 +79,14 @@ export const proxyConnect = (target, socket, options) => {
       if (!opened) {
         // connection closed before open (e.g., handshake fail)
         if (retryEnabled && attempts <= maxRetries) {
-          const delay = initialBackoff * Math.pow(factor, attempts - 1);
+          const delay = initialBackoff * factor ** (attempts - 1);
           log.warn(`[Retry] Attempt ${attempts} closed. Retrying in ${delay}ms...`);
           sleep(delay).then(connectOnce);
           return;
         }
 
-        if (e.reason == "Expected 101 status code") {
-          if (options.type == 'HTTP')
+        if (e.reason === "Expected 101 status code") {
+          if (options.type === 'HTTP')
             socket.write('HTTP/1.1 500 Internal Server Error\r\n\r\n');
           else
             socket.write(Buffer.from([0x5, 0x05, 0x00, 0x01, 0x7f, 0x00, 0x00, 0x01, 0x00, 0x00]));
@@ -98,8 +98,8 @@ export const proxyConnect = (target, socket, options) => {
       }
 
       // If already opened, do not retry; close path remains the same as before
-      if (e.reason == "Expected 101 status code") {
-        if (options.type == 'HTTP')
+      if (e.reason === "Expected 101 status code") {
+        if (options.type === 'HTTP')
           socket.write('HTTP/1.1 500 Internal Server Error\r\n\r\n');
         else
           socket.write(Buffer.from([0x5, 0x05, 0x00, 0x01, 0x7f, 0x00, 0x00, 0x01, 0x00, 0x00]));
