@@ -223,7 +223,6 @@ JSON
   echo "[+] Starting proxy client..."
   echo "    Press Ctrl+C to stop the proxy."
   echo "[i] Running command: bun proxy.js $TYPE -a $TOKEN -p $FREE_PORT --worker $HOST0 --worker $HOST1"
-  # bun run start
   bun proxy.js "$TYPE" -a "$TOKEN" -p "$FREE_PORT" --worker "$HOST0" --worker "$HOST1"
 }
 
