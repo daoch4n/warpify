@@ -1,128 +1,139 @@
 # cf-proxy
 
-> Proxy requests through Cloudflare (CF) workers
+> Proxy requests through Cloudflare (CF) workers with load balancing and high availability.
 
-A simple worker that acts as proxy to tunnel requests over the internet, forwarding them through Cloudflare's global 
-network of servers. This way, we can archieve automatic IP address rotation, all coming from a trusted ASN 
-(as CF is used by a huge number of websites, their ASNs are usually whitelisted 
-on firewalls :stuck_out_tongue_winking_eye:).
+A simple worker that acts as a proxy to tunnel requests over the internet, forwarding them through Cloudflare's global network of servers. By leveraging multiple worker endpoints, this tool provides automatic IP address rotation, load balancing, and enhanced reliability. This is useful because Cloudflare's ASNs are often whitelisted on firewalls.
+
+## Features
+
+- **HTTP and SOCKS5 Proxy:** Supports both common proxy protocols.
+- **Load Balancing:** Distributes traffic across multiple Cloudflare Worker endpoints using `random` or `round-robin` strategies.
+- **High Availability:** Automatically retries failed connections with exponential backoff, improving resilience.
+- **Configuration:** Easily configurable via a `config.json` file or command-line arguments.
+- **Automatic IP Rotation:** Each request can potentially be routed through a different IP address from Cloudflare's network.
 
 ## Usage
 
-You will need [bun](https://bun.sh/) to run the client script `proxy.js`. You can install it by running:
+You will need [Bun](https://bun.sh/) to run the client script. You can install it by running:
 
 ```bash
 curl -fsSL https://bun.sh/install | bash
 . ~/.bashrc
 ```
 
-You also need a Cloudflare account to deploy the worker. A free account is fine, but you might experience some issues 
-with page loading with slow website connections as the workers have a limitation of 10ms CPU time per request on the 
-free tier, but as long as you don't try to download any big files this should be enough to navigate the internet.
+You also need a Cloudflare account to deploy the worker(s). A free account is sufficient for basic use.
 
-Once you have bun installed, go ahead and install `wrangler` using:
+Once you have Bun installed, install `wrangler`, the Cloudflare CLI:
 
 ```bash
 bun i -g wrangler
 ```
 
-Login to CF with `wrangler`:
+Login to Cloudflare with `wrangler`:
 
 ```bash
 wrangler login
 ```
 
-Then, `cd` into `worker/` directory and install dependences with:
+### 1. Deploy the Worker
+
+`cd` into the `worker/` directory, install dependencies, and deploy:
 
 ```bash
 cd worker/
 bun i
-```
-
-Now, edit the file at `src/index.js` to include an authorization token (necessary to avoid other people from using it). 
-Just change the TOKEN constant value:
-
-```javascript
-5   const TOKEN = '<YOUR-AUTH-TOKEN>'
-```
-
-
-Now, you can deploy the worker with (on `worker/`)
-```bash
 wrangler deploy
 ```
 
-You can run `bun proxy.js` (with no arguments) to see options:
+This will create a worker (e.g., `my-instance.workers.dev`). You can deploy the same worker multiple times under different names to create a pool of endpoints for load balancing.
+
+Next, you need to set a secret authorization token for your worker. This prevents unauthorized use.
+
+```bash
+# Still in the worker/ directory
+wrangler secret put TOKEN
+```
+
+You will be prompted to enter the value for your secret token.
+
+### 2. Configure the Client
+
+The client can be configured using a `config.json` file in the project root. This is the recommended method.
+
+Create a `config.json` file by copying the example:
+
+```bash
+cp config.example.json config.json
+```
+
+Now, edit `config.json` to add your worker endpoints and authorization token:
+
+```json
+{
+  "worker": [
+    "your-worker-1.workers.dev",
+    "your-worker-2.workers.dev"
+  ],
+  "authorization": "your-auth-token-you-set-with-wrangler",
+  "port": 1080,
+  "type": "socks",
+  "verbose": false,
+  "retry_enabled": true,
+  "max_retries": 5,
+  "retry_initial_backoff": 1000,
+  "retry_factor": 2,
+  "load_balancing_strategy": "random"
+}
+```
+
+### 3. Run the Proxy
+
+Once configured, you can start the proxy client from the project's root directory:
+
+```bash
+bun run start
+```
+
+The client will read your `config.json` and start the proxy server. You can then configure your browser or application to use `127.0.0.1:1080` (or the port you specified) as a SOCKS5 or HTTP proxy.
+
+### Command-Line Options
+
+You can also override `config.json` settings using command-line arguments.
 
 ```
 proxy.js - Proxy requests through CloudFlare workers
-Usage: bun proxy.js [options] <socks|http> <worker>
+Usage: bun proxy.js [options]
 
 Options:
 
--h, --help         Show this help message and exit
--p, --port         Port to listen on
--a, --auth         Authorization header
--v, --verbose      Enable verbose mode (default: false)
-
-Example: bun proxy.js -v -a auth-secret socks my-instance.workers.dev
-
-By daoch4n <daoch4n@gmail.com>
-More at https://github.com/lvmalware
-
+-h, --help                Show this help message and exit
+-p, --port <port>         Port to listen on
+-a, --auth <token>        Authorization header
+-w, --worker <endpoint>   Specify a worker endpoint (can be used multiple times)
+-s, --strategy <strategy> Load balancing strategy ('random' or 'round-robin')
+-t, --type <type>         Proxy type ('socks' or 'http')
+-v, --verbose             Enable verbose mode (default: false)
+--no-retry                Disable connection retries
 ```
 
-The general usage options are `-a` (to provide the authorization token), followed by the type of proxy and the 
-worker's address.
-
-For example, lets suppose your worker instance has the address `myinstance.workers.dev`, with the auth token of 
-`secret` (your CF token) and you want to run a SOCKS5 proxy server on port `1080` (default for SOCKS). 
-This could be done with the following command:
-
-> Make sure that you are in the root project directory.
+**Example:**
 
 ```bash
-cd ..
-bun proxy.js -a secret -p 1080 socks myinstance.workers.dev
+bun proxy.js -a 'your-auth-token' -p 1080 -t socks -w my-instance-1.workers.dev -w my-instance-2.workers.dev
 ```
 
-Then configure your browser to use `127.0.0.1:1080` as a SOCKS5 proxy and enjoy the automatic ip address 
-rotation :wink:.
+### Verify Your IP
 
-For a http proxy, just change the type from `socks` to `http`, for example:
+To confirm that your IP has changed, configure your browser to use the proxy and visit a site like `https://myip.wtf/json`. Alternatively, from the command line:
 
 ```bash
-bun proxy.js -a secret -p 8080 http myinstance.workers.dev
-```
+# For an HTTP proxy on port 8080
+curl -x http://localhost:8080 https://myip.wtf/json
 
-> In order to confirm that your IP has changed. 
-> You can easily see your request information on the CLI with:
-
-```bash
-curl -x localhost:8080 https://myip.wtf/json
-```
-
-> Or simply go to the address below on the URL bar. Remember to configure the proxy on the browser, 
-> I suggest this extension [Foxy proxy standard](https://addons.mozilla.org/pt-BR/firefox/addon/foxyproxy-standard/) for easily switching between proxy configurations.
-
-```
-https://myip.wtf/json
+# For a SOCKS5 proxy on port 1080
+curl -x socks5h://localhost:1080 https://myip.wtf/json
 ```
 
 ## Limitations
 
-By default, Cloudflare doesn't allow connections to port 25 of any target. Also, connecting to Cloudflare 
-address space from within a worker is not supported, so you might have problems accessing sites that are 
-behind CF (there are some ways around it, but I will leave that as an exercise to the reader :smiley:).
-
-## Notes
-
-Your IP address will rotate at _each_ request, since the worker runs on the so-called serverless architecture, 
-spawned in a distributed global network of servers owned by cloudflare. Each time you invoke a worker, a different 
-server might be provisioned depending on the current availability. These servers might be located on your region 
-(which is usually the case) or even in another country.
-
-This project is just an example to showcase an application that I developed while learning javascript and 
-[Workers](https://workers.cloudflare.com/). I'm not related to the company, nor I endorse or otherwise discourage 
-the usage their services. And finally, this project is intended only for educational purposes and I won't be 
-responsible for any bad actions or abuse of this service. 
+By default, Cloudflare doesn't allow connections to port 25 of any target. Also, connecting to Cloudflare's address space from within a worker is not supported, so you might have problems accessing sites that are behind Cloudflare.

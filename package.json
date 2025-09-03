@@ -1,0 +1,17 @@
+{
+  "name": "warpify",
+  "version": "0.0.7",
+  "description": "Proxy requests through Cloudflare (CF) workers with load balancing and high availability.",
+  "main": "proxy.js",
+  "scripts": {
+    "start": "bun proxy.js"
+  },
+  "keywords": [
+    "cloudflare",
+    "proxy",
+    "worker",
+    "load-balancing"
+  ],
+  "author": "daoch4n <daoch4n@gmail.com>",
+  "license": "MIT"
+}
