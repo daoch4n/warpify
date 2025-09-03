@@ -1,4 +1,4 @@
-# cf-proxy
+# warpify
 
 > Proxy requests through Cloudflare (CF) workers with load balancing and high availability.
 
