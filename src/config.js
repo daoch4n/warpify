@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const normalizeType = (t) => {
   if (!t) return undefined;
@@ -40,7 +40,7 @@ export const loadConfig = (argv = []) => {
         } else if (typeof base.worker === 'string') {
           options.workers.push(base.worker);
         }
-        delete options.worker; // use options.workers
+        Reflect.deleteProperty(options, 'worker'); // use options.workers
       }
       if (base.load_balancing_strategy) {
         options.strategy = base.load_balancing_strategy;
@@ -69,7 +69,7 @@ export const loadConfig = (argv = []) => {
         break;
       case '-p':
       case '--port':
-        options.port = parseInt(argv[++i]);
+        options.port = Number.parseInt(argv[++i], 10);
         break;
       case '-a':
       case '--auth':
@@ -87,10 +87,10 @@ export const loadConfig = (argv = []) => {
         break;
       }
       case '--max-retries':
-        options.max_retries = parseInt(argv[++i]);
+        options.max_retries = Number.parseInt(argv[++i], 10);
         break;
       case '--retry-initial-backoff':
-        options.retry_initial_backoff = parseInt(argv[++i]);
+        options.retry_initial_backoff = Number.parseInt(argv[++i], 10);
         break;
       case '--retry-factor':
         options.retry_factor = parseNum(argv[++i]);
