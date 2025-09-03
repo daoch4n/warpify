@@ -115,7 +115,7 @@ Options:
 -s, --strategy <strategy> Load balancing strategy ('random' or 'round-robin')
 -t, --type <type>         Proxy type ('socks' or 'http')
 -v, --verbose             Enable verbose mode (default: false)
---no-retry                Disable connection retries
+--retry-enabled [bool]    Enable connection retries (pass false to disable)
 ```
 
 **Example:**
