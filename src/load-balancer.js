@@ -1,6 +1,5 @@
-let currentIndex = 0;
-
 export const createLoadBalancer = (workers, strategy) => {
+  let currentIndex = 0;
   if (!Array.isArray(workers) || workers.length === 0) {
     throw new Error('Worker list must be a non-empty array.');
   }
