@@ -60,13 +60,13 @@ export const socks5Server = (options) => {
       switch (socket.step) {
         case 0: {
           if (data[0] !== 0x05) {
-            if (options.verbose) console.log('[!] SOCKS version mismatch');
+            log.warn('SOCKS version mismatch');
             socket.shutdown();
           }
 
           if (!data.slice(2).includes(0x00)) {
             // either is not a real socks client, or it needs to be authenticated somehow
-            if (options.verbose) console.log('[!] SOCKS client error');
+            log.warn('SOCKS client error');
             socket.shutdown();
           }
 
