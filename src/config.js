@@ -40,7 +40,7 @@ export const loadConfig = (argv = []) => {
         } else if (typeof base.worker === 'string') {
           options.workers.push(base.worker);
         }
-        Reflect.deleteProperty(options, 'worker'); // use options.workers
+        options.worker = undefined; // use options.workers
       }
       if (base.load_balancing_strategy) {
         options.strategy = base.load_balancing_strategy;
