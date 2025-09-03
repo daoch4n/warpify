@@ -184,9 +184,11 @@ main() {
   fi
   
   if [[ "$FREE_PORT" != "$PORT" ]]; then
-      echo "[+] Using free port: $FREE_PORT"
-      # Update config.json with the free port
-      cat > config.json <<JSON
+    echo "[+] Using free port: $FREE_PORT"
+  fi
+  echo "[+] Writing config.json with the new workers and token..."
+  # Update config.json with the free port
+  cat > config.json <<JSON
 {
   "worker": [
     "${HOST0}",
@@ -196,25 +198,9 @@ main() {
   "port": ${FREE_PORT},
   "type": "${TYPE}",
   "verbose": false,
- "load_balancing_strategy": "random"
-}
-JSON
-  else
-      echo "[+] Writing config.json with the new workers and token..."
-      cat > config.json <<JSON
-{
-  "worker": [
-    "${HOST0}",
-    "${HOST1}"
-  ],
-  "authorization": "${TOKEN}",
-  "port": ${PORT},
-  "type": "${TYPE}",
-  "verbose": false,
   "load_balancing_strategy": "random"
 }
 JSON
-  fi
 
   echo "[+] Configuration written to config.json"
   echo "    Workers: ${HOST0}, ${HOST1}"
