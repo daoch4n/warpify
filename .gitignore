@@ -2,3 +2,4 @@ bun.lockb
 .wrangler/
 node_modules/
 config.json
+.aider*

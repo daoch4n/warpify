@@ -22,18 +22,19 @@ export const httpServer = (options) => {
     async data(socket, data) {
       try {
         if (!socket.proxy) {
-        const target = parseTarget(data);
-        socket.proxy = proxyConnect(target, socket, options);
-      } else {
-        socket.proxy.send(data);
-      }
+          const target = parseTarget(data);
+          socket.proxy = proxyConnect(target, socket, options);
+        } else {
+          socket.proxy.send(data);
+        }
       } catch (err) {
         log.error('[HTTP] Socket data error:', err?.stack || err);
         try { socket.shutdown(); } catch (_) {}
       }
     }
   }
-});
+  });
+}
 
 export const socks5Server = (options) => {
   const log = createLogger(options);
@@ -57,8 +58,8 @@ export const socks5Server = (options) => {
       }
 
       switch (socket.step) {
-        case 0:
-          if (data[0] != 0x05) {
+        case 0: {
+          if (data[0] !== 0x05) {
             if (options.verbose) console.log('[!] SOCKS version mismatch');
             socket.shutdown();
           }
@@ -74,15 +75,16 @@ export const socks5Server = (options) => {
           socket.step++;
 
           break;
+        }
 
-        case 1:
-          if (data[0] != 0x05 || data[2] != 0x00) {
+        case 1: {
+          if (data[0] !== 0x05 || data[2] !== 0x00) {
             if (options.verbose) console.log('[!] SOCKS version mismatch');
             socket.shutdown();
           }
 
           // we only allow connect (0x01) requests
-          if (data[1] != 0x01) {
+          if (data[1] !== 0x01) {
             if (options.verbose) console.log('[!] Client request could not be satisfied');
             socket.write(Buffer.from([0x05, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]));
             socket.shutdown();
@@ -91,18 +93,18 @@ export const socks5Server = (options) => {
           // now we parse the target information
           let target = '';
 
-          if (data[3] == 0x1) {
+          if (data[3] === 0x1) {
             // ipv4
             target = data.slice(4, 8).map(n => n.toString()).join('.');
-          } else if (data[3] == 0x3) {
+          } else if (data[3] === 0x3) {
             // domain
             target = String(Buffer.from(data.slice(5, 5 + data[4])));
-          } else if (data[3] == 0x4) {
+          } else if (data[3] === 0x4) {
             // ipv6
             const ipv6 = Array.from(data.slice(4, 20)).map(b => b.toString(16).padStart(2, 0));
 
             for (let i = 0; i < ipv6.length; i += 2) {
-              if (i != 0) target += ':';
+              if (i !== 0) target += ':';
               target += ipv6.slice(i, i + 2).join('');
             }
 
@@ -121,6 +123,7 @@ export const socks5Server = (options) => {
           socket.proxy = proxyConnect(target, socket, options);
 
           break;
+        }
       }
       } catch (err) {
         log.error('[SOCKS5] Socket data error:', err?.stack || err);
@@ -128,4 +131,5 @@ export const socks5Server = (options) => {
       }
     }
   }
-});
+  });
+}
