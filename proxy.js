@@ -8,7 +8,7 @@ function main() {
 
   if (options.help) {
     console.log(`${import.meta.file} - Proxy requests through CloudFlare workers`);
-    console.log(`Usage: bun ${import.meta.file} [options] <socks|http> <worker>`);
+    console.log(`Usage: bun ${import.meta.file} [options] [socks|http]`);
     console.log('');
     console.log('Options:');
     console.log('');
